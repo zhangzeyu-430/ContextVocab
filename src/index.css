@@ -1,0 +1,97 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  font-family: "Plus Jakarta Sans", "Manrope", "Segoe UI", sans-serif;
+  color: #1e332a;
+  background:
+    radial-gradient(1200px 460px at 50% -120px, rgba(76, 116, 98, 0.55) 0%, rgba(76, 116, 98, 0) 72%),
+    linear-gradient(180deg, #e6ece8 0%, #efefeb 34%, #f4f5f2 100%);
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  color: #1e332a;
+  background: transparent;
+}
+
+#root {
+  min-height: 100vh;
+}
+
+.app-shell {
+  position: relative;
+  min-height: 100vh;
+}
+
+.app-shell::before {
+  content: none;
+}
+
+.app-shell::after {
+  content: "";
+  position: fixed;
+  inset: 0;
+  background:
+    radial-gradient(360px 180px at 20% 14%, rgba(197, 221, 205, 0.36) 0%, rgba(197, 221, 205, 0) 85%),
+    radial-gradient(300px 160px at 80% 17%, rgba(197, 221, 205, 0.3) 0%, rgba(197, 221, 205, 0) 85%);
+  pointer-events: none;
+  z-index: -1;
+}
+
+.text-balance {
+  text-wrap: balance;
+}
+
+@keyframes countPop {
+  0% {
+    transform: translateY(3px) scale(0.94);
+    opacity: 0.6;
+  }
+  100% {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+.animate-count-pop {
+  animation: countPop 340ms ease-out;
+}
+
+.ui-card {
+  border: 1px solid rgba(203, 220, 206, 0.9);
+  background: rgba(255, 255, 255, 0.86);
+  border-radius: 1.4rem;
+  box-shadow: 0 14px 34px rgba(30, 51, 42, 0.1);
+  backdrop-filter: blur(6px);
+}
+
+.ui-card-soft {
+  border: 1px solid rgba(203, 220, 206, 0.72);
+  background: rgba(255, 255, 255, 0.72);
+  border-radius: 1rem;
+}
+
+.ui-pill {
+  border: 1px solid rgba(203, 220, 206, 0.95);
+  border-radius: 999px;
+  background: rgba(244, 248, 245, 0.95);
+}
+
+.ui-btn-primary {
+  border: 1px solid rgba(77, 117, 98, 0.98);
+  background: linear-gradient(180deg, #557f6b 0%, #3d6653 100%);
+  color: #fff;
+  transition: transform 180ms ease, filter 180ms ease;
+}
+
+.ui-btn-primary:hover {
+  transform: translateY(-1px);
+  filter: brightness(1.02);
+}

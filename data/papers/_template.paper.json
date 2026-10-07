@@ -1,0 +1,31 @@
+{
+  "paper": {
+    "id": "cet6-2025-06-set1",
+    "exam": "六级",
+    "year": 2025,
+    "month": 6,
+    "set": 1,
+    "title": "2025年6月英语六级真题（第1套）"
+  },
+  "passages": [
+    {
+      "id": "cet6-2025-06-set1-section-b",
+      "section": "Section B",
+      "title": "2025年6月第1套 · Section B · Passage Title",
+      "level": "CET-6",
+      "category": "Exam Reading",
+      "modeLabel": "阅读学习模式",
+      "content": "Put full passage content here...",
+      "highlightSeeds": [
+        {
+          "id": "keyword-1",
+          "word": "undervalued",
+          "sentence": "Original sentence containing the word.",
+          "ipa": "/ʌnˈvæljuːd/",
+          "partOfSpeech": "adjective"
+        }
+      ]
+    }
+  ]
+}
+

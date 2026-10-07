@@ -1,0 +1,436 @@
+import { Article, ExamPaper, HighlightWord, MemoryCardContent } from "@/types";
+import { importedArticleSeeds, importedExamPapers } from "./papers.imported";
+import { readUploadedPapers } from "@/utils/uploadedPapers";
+
+type HighlightSeed = {
+  id: string;
+  word: string;
+  sentence: string;
+  ipa?: string;
+  partOfSpeech?: string;
+};
+
+type ArticleSeed = Omit<Article, "highlights" | "practice"> & {
+  highlightSeeds: HighlightSeed[];
+};
+
+const defaultCard = (word: string): MemoryCardContent => ({
+  meaning: `${word} should be interpreted in its sentence context.`,
+  reasoning: `This word carries a more specific tone than a neutral alternative.`,
+  contrast: {
+    baseWord: "basic word",
+    baseMeaning: "more neutral and generic",
+    targetWord: word,
+    targetMeaning: "more precise in this context"
+  },
+  analogy: "Remember it as a context-driven expression, not an isolated translation.",
+  synonyms: ["related", "similar"],
+  mistake: "Do not memorize only the dictionary meaning. Check the sentence role.",
+  oneLiner: `${word}: understand in context first, memorize second.`
+});
+
+function mockIpa(word: string) {
+  return `/${word.toLowerCase()}/`;
+}
+
+function getSentenceRange(content: string, sentence: string) {
+  const sentenceStartIndex = content.indexOf(sentence);
+  if (sentenceStartIndex === -1) {
+    return null;
+  }
+  return {
+    sentenceStartIndex,
+    sentenceEndIndex: sentenceStartIndex + sentence.length
+  };
+}
+
+function getWordRange(content: string, sentence: string, word: string) {
+  const sentenceRange = getSentenceRange(content, sentence);
+  if (!sentenceRange) {
+    return null;
+  }
+  const relativeWordStart = sentence.toLowerCase().indexOf(word.toLowerCase());
+  if (relativeWordStart === -1) {
+    return null;
+  }
+  return {
+    startIndex: sentenceRange.sentenceStartIndex + relativeWordStart,
+    endIndex: sentenceRange.sentenceStartIndex + relativeWordStart + word.length,
+    sentenceStartIndex: sentenceRange.sentenceStartIndex,
+    sentenceEndIndex: sentenceRange.sentenceEndIndex
+  };
+}
+
+function buildHighlights(content: string, seeds: HighlightSeed[]): HighlightWord[] {
+  return seeds
+    .map((seed) => {
+      const range = getWordRange(content, seed.sentence, seed.word);
+      if (!range) {
+        return null;
+      }
+      return {
+        id: seed.id,
+        word: seed.word,
+        sentence: seed.sentence,
+        ipa: seed.ipa || mockIpa(seed.word),
+        partOfSpeech: seed.partOfSpeech || "word",
+        card: defaultCard(seed.word),
+        ...range
+      } satisfies HighlightWord;
+    })
+    .filter((item): item is HighlightWord => Boolean(item));
+}
+
+function createArticle(seed: ArticleSeed): Article {
+  return {
+    ...seed,
+    highlights: buildHighlights(seed.content, seed.highlightSeeds),
+    practice: []
+  };
+}
+
+const sectionBContent = `Why Your Library Is the Most Important Place in Town
+
+A. Librarians know the value of their community services, and their patrons appreciate their importance as well. But in an increasingly digital world, we see the role of libraries as community and cultural centers at times undervalued. When shrinking municipal budgets combine with the nonstop technological revolution, public library services that focus on building communities face-to-face, inspiring and educating patrons about art, literature, and music, and helping patrons engage in civil discourse can seem old-fashioned. But it is precisely those shrinking budgets and the assault of technologically mediated life that make public libraries' cultural and community offerings more important than ever.
+
+B. Many people point out the value public libraries bring to their communities. More than just books and banks of computers, libraries are still places where individuals gather to explore, interact, and imagine. Some of the specific ways in which libraries add value to our communities and serve as cultural centers for our patrons are community builders, centers for the arts, and champions of youth. Libraries serve in these capacities and are more than just about information.
+
+C. As community builders libraries are engaged in incredible work. From tiny public libraries to huge city institutions with multiple branches, libraries across the United States are building community and supporting local culture in exciting ways. These are inspiring and hopefully will encourage librarians interested in community services and cultural outreach to make connections with each other, share ideas, and build partnerships. Supporters of libraries as community builders claim that unless you are out there changing neighborhoods, you are not completing the work you are to do.
+
+D. Place-based economic development stresses the importance of offering attractive, functional, and community-based places, such as libraries, in town squares and depressed neighborhoods. Like a major department store in a mall, libraries attract large numbers of people, creating economic opportunities for numerous businesses and organizations in the surrounding area. Large cities, medium-sized ones, and even small towns have successfully transformed their libraries into the hubs of vibrant neighborhoods.
+
+E. As key municipal agencies, and focal points for community education, libraries are major players in creating livable, environmentally friendly cities and towns. The Urban Libraries Council released a report detailing the unique ways in which libraries can further sustainability at the local level. Beyond ensuring that library construction projects consider environmental impact, libraries can take a lead in supporting local foods and craftsmen.
+
+F. Archives preserve historic artifacts, oral histories, digital history projects, and scholarly writings relevant to the community, including minority groups. An organized archive is a place where people can research their ancestry and immigration history, do environmental research, and more. An archivist is an advocate for preservation who coordinates restoration and digitization projects for public memory.
+
+G. In the words of Robert Putnam, "People may go to the library looking mainly for information, but they find each other there." In libraries, community-building connections are happening all the time.
+
+H. As Keith Richards said, "The public library is the great equalizer." Despite the rising costs of concert and theater tickets, public library events are often offered free of charge, enabling people of any income level to attend.
+
+I. In a time when education is increasingly expensive, public libraries provide information and educational opportunities free for all people, regardless of their socio-economic status.
+
+J. Librarians know that patrons aren't just information consumers, they're information producers. Increasing numbers of libraries provide spaces and services that meet the needs of people who want to learn how to edit Wikipedia, set up blogs or podcasts, and create their own magazines.
+
+K. Public libraries, through such programs as The Human Library and Socrates Café, can help build small communities of difference that encourage people to interact with and learn from each other through dialogue. By both actively promoting civil discourse through these programs, and modeling and upholding the principles of free inquiry and expression for all, libraries help individuals rediscover the importance of civil discourse in public life.
+
+L. Free tutoring, homework help programs, and summer reading programs for kids and teens help bridge the economic divide that impacts students' academic performance.
+
+M. Through library collections, programs, and physical spaces, children learn to share, to be engaged in their communities, and to explore their immediate world and the world at large.
+
+N. These examples are just a few of the many amazing things that public libraries are doing to build and maintain strong community connections.`;
+
+const sectionCPassageOne = `Nationally, one in six children miss 15 or more days of school in a year. Education officials have deplored all this missed instruction.
+
+These chronically absent students suffer academically because of all the classroom instruction they miss out on. In 2015, the US secretary of education responded to this crisis, urging communities to support every student to attend every day and be successful in school. His open letter stated that missing 10% of school days in a year for any reason, excused or unexcused, is a primary cause of low academic achievement.
+
+Worrying about whether children attend school makes sense. After all, if students don't show up, teachers can't teach them.
+
+But what if America's attendance crisis is about much more than students missing class? What if, instead, it is a reflection of family and community crises these students face, such as being ejected from the family apartment, fearing for their safety in their neighborhood, or suffering an illness?
+
+As social scientists we investigated how excused and unexcused absences relate to children's academic achievement.
+
+We find that absences excused by a parent do little to harm children's learning. In fact, children with no unexcused absences but 15 to 18 excused absences have test scores equal to their peers who have no absences.
+
+Meanwhile, the average child with even just one unexcused absence does much worse academically than peers with none.
+
+We believe unexcused absence is a strong signal of the many challenges children and families face, including economic and medical hardships. Unexcused absences can be a powerful signal of how those out-of-school challenges affect children's academic progress.
+
+Our evidence suggests unexcused absences are problematic, but for a different reason than people often think. Absence from school, and especially unexcused absence, matters mainly as a signal of many crises children and their families may be facing.
+
+How we choose to think of school absences matters for educational policy. School attendance policies typically hold schools and families accountable for the days children miss, regardless of whether they were excused or unexcused absences.
+
+These policies assume that missing school for any reason harms children academically because they are missing classroom instruction. They also assume that schools will be able to effectively intervene by reducing student absences. We find neither to be the case.
+
+As a result, these attendance policies end up disproportionately punishing families dealing with out-of-school crises in their lives and pressuring schools who serve them to get students to school more often.
+
+We instead suggest using unexcused absence from school as a signal to channel resources to the children and families who need them most.`;
+
+const sectionCPassageTwo = `After earning a bachelor's degree, I was determined to do what I love. I headed straight to graduate school to investigate the social problems that fascinated me.
+
+For almost a decade, I told everyone I encountered that they should do the same. "Follow your passion," I counseled. "You can figure out the employment stuff later."
+
+It wasn't until I began to research this widely accepted career advice that I understood how problematic it really was.
+
+As a sociologist, I interviewed college students and professional workers to learn what it really meant to pursue their dreams, which I will refer to here as the passion principle.
+
+Surveys show the American public has long held the passion principle in high regard as a career decision-making priority. And its popularity is even stronger among those facing job instability.
+
+Advocates of the passion principle found it compelling because they believed that following one's passion can provide workers with both the motivation necessary to work hard and a place to find fulfillment.
+
+Yet, what I found is that following one's passion does not necessarily lead to fulfillment, but is one of the most powerful cultural forces perpetuating overwork.
+
+I also found that promoting the pursuit of one's passion helps perpetuate social inequalities due to the fact that not everyone has the same economic resources to allow them to pursue their passion with ease.
+
+While the passion principle is broadly popular, not everyone has the necessary resources to turn their passion into a stable, good-paying job. Passion-seekers from wealthy families are better able to wait until a job they are passionate about comes along without worrying about student loans in the meantime.
+
+They are also better situated to take unpaid internships to get their foot in the door while their parents pay their rent. And they often have access to parents' social networks to help them find jobs.
+
+Surveys revealed that working-class and first-generation college graduates are more likely than their wealthier peers to end up in low-paying unskilled jobs when they pursue their passion.
+
+Colleges, workplaces and career counselors who promote the "follow your passion" path for everyone, without leveling the playing field, help perpetuate socioeconomic inequalities among career aspirants.`;
+
+const articlesSeed: ArticleSeed[] = [
+  {
+    id: "cet6-2025-06-set1-section-b",
+    exam: "六级",
+    year: 2025,
+    month: 6,
+    set: 1,
+    paperId: "cet6-2025-06-set1",
+    section: "Section B",
+    title: "2025年6月第1套 · Section B · Why Your Library Is the Most Important Place in Town",
+    level: "CET-6",
+    category: "Exam Reading",
+    modeLabel: "阅读学习模式",
+    content: sectionBContent,
+    highlightSeeds: [
+      {
+        id: "cet6b-undervalued",
+        word: "undervalued",
+        sentence: "But in an increasingly digital world, we see the role of libraries as community and cultural centers at times undervalued."
+      },
+      {
+        id: "cet6b-municipal",
+        word: "municipal",
+        sentence: "When shrinking municipal budgets combine with the nonstop technological revolution, public library services that focus on building communities face-to-face, inspiring and educating patrons about art, literature, and music, and helping patrons engage in civil discourse can seem old-fashioned."
+      },
+      {
+        id: "cet6b-discourse",
+        word: "discourse",
+        sentence: "When shrinking municipal budgets combine with the nonstop technological revolution, public library services that focus on building communities face-to-face, inspiring and educating patrons about art, literature, and music, and helping patrons engage in civil discourse can seem old-fashioned."
+      },
+      {
+        id: "cet6b-mediated",
+        word: "mediated",
+        sentence: "But it is precisely those shrinking budgets and the assault of technologically mediated life that make public libraries' cultural and community offerings more important than ever."
+      },
+      {
+        id: "cet6b-outreach",
+        word: "outreach",
+        sentence: "These are inspiring and hopefully will encourage librarians interested in community services and cultural outreach to make connections with each other, share ideas, and build partnerships."
+      },
+      {
+        id: "cet6b-equalizer",
+        word: "equalizer",
+        sentence: "As Keith Richards said, \"The public library is the great equalizer.\""
+      },
+      {
+        id: "cet6b-inquiry",
+        word: "inquiry",
+        sentence: "By both actively promoting civil discourse through these programs, and modeling and upholding the principles of free inquiry and expression for all, libraries help individuals rediscover the importance of civil discourse in public life."
+      },
+      {
+        id: "cet6b-tutoring",
+        word: "tutoring",
+        sentence: "Free tutoring, homework help programs, and summer reading programs for kids and teens help bridge the economic divide that impacts students' academic performance."
+      }
+    ]
+  },
+  {
+    id: "cet6-2025-06-set1-section-c-passage-1",
+    exam: "六级",
+    year: 2025,
+    month: 6,
+    set: 1,
+    paperId: "cet6-2025-06-set1",
+    section: "Section C · Passage One",
+    title: "2025年6月第1套 · Section C Passage 1 · School Absence and Policy",
+    level: "CET-6",
+    category: "Exam Reading",
+    modeLabel: "阅读学习模式",
+    content: sectionCPassageOne,
+    highlightSeeds: [
+      {
+        id: "cet6c1-chronically",
+        word: "chronically",
+        sentence: "These chronically absent students suffer academically because of all the classroom instruction they miss out on."
+      },
+      {
+        id: "cet6c1-crisis",
+        word: "crisis",
+        sentence: "In 2015, the US secretary of education responded to this crisis, urging communities to support every student to attend every day and be successful in school."
+      },
+      {
+        id: "cet6c1-excused",
+        word: "excused",
+        sentence: "His open letter stated that missing 10% of school days in a year for any reason, excused or unexcused, is a primary cause of low academic achievement."
+      },
+      {
+        id: "cet6c1-investigated",
+        word: "investigated",
+        sentence: "As social scientists we investigated how excused and unexcused absences relate to children's academic achievement."
+      },
+      {
+        id: "cet6c1-hardships",
+        word: "hardships",
+        sentence: "We believe unexcused absence is a strong signal of the many challenges children and families face, including economic and medical hardships."
+      },
+      {
+        id: "cet6c1-accountable",
+        word: "accountable",
+        sentence: "School attendance policies typically hold schools and families accountable for the days children miss, regardless of whether they were excused or unexcused absences."
+      },
+      {
+        id: "cet6c1-intervene",
+        word: "intervene",
+        sentence: "They also assume that schools will be able to effectively intervene by reducing student absences."
+      },
+      {
+        id: "cet6c1-channel",
+        word: "channel",
+        sentence: "We instead suggest using unexcused absence from school as a signal to channel resources to the children and families who need them most."
+      }
+    ]
+  },
+  {
+    id: "cet6-2025-06-set1-section-c-passage-2",
+    exam: "六级",
+    year: 2025,
+    month: 6,
+    set: 1,
+    paperId: "cet6-2025-06-set1",
+    section: "Section C · Passage Two",
+    title: "2025年6月第1套 · Section C Passage 2 · The Passion Principle",
+    level: "CET-6",
+    category: "Exam Reading",
+    modeLabel: "阅读学习模式",
+    content: sectionCPassageTwo,
+    highlightSeeds: [
+      {
+        id: "cet6c2-determined",
+        word: "determined",
+        sentence: "After earning a bachelor's degree, I was determined to do what I love."
+      },
+      {
+        id: "cet6c2-investigate",
+        word: "investigate",
+        sentence: "I headed straight to graduate school to investigate the social problems that fascinated me."
+      },
+      {
+        id: "cet6c2-problematic",
+        word: "problematic",
+        sentence: "It wasn't until I began to research this widely accepted career advice that I understood how problematic it really was."
+      },
+      {
+        id: "cet6c2-sociologist",
+        word: "sociologist",
+        sentence: "As a sociologist, I interviewed college students and professional workers to learn what it really meant to pursue their dreams, which I will refer to here as the passion principle."
+      },
+      {
+        id: "cet6c2-instability",
+        word: "instability",
+        sentence: "And its popularity is even stronger among those facing job instability."
+      },
+      {
+        id: "cet6c2-fulfillment",
+        word: "fulfillment",
+        sentence: "Advocates of the passion principle found it compelling because they believed that following one's passion can provide workers with both the motivation necessary to work hard and a place to find fulfillment."
+      },
+      {
+        id: "cet6c2-perpetuate",
+        word: "perpetuate",
+        sentence: "I also found that promoting the pursuit of one's passion helps perpetuate social inequalities due to the fact that not everyone has the same economic resources to allow them to pursue their passion with ease."
+      },
+      {
+        id: "cet6c2-inequalities",
+        word: "inequalities",
+        sentence: "Colleges, workplaces and career counselors who promote the \"follow your passion\" path for everyone, without leveling the playing field, help perpetuate socioeconomic inequalities among career aspirants."
+      }
+    ]
+  }
+];
+
+const builtInExamPapers: ExamPaper[] = [
+  {
+    id: "cet6-2025-06-set1",
+    exam: "六级",
+    year: 2025,
+    month: 6,
+    set: 1,
+    title: "2025年6月英语六级真题（第1套）",
+    passageIds: [
+      "cet6-2025-06-set1-section-b",
+      "cet6-2025-06-set1-section-c-passage-1",
+      "cet6-2025-06-set1-section-c-passage-2"
+    ]
+  }
+];
+
+function dedupeById<T extends { id: string }>(items: T[]): T[] {
+  const map = new Map<string, T>();
+  items.forEach((item) => map.set(item.id, item));
+  return Array.from(map.values());
+}
+
+function uploadedBundlesToArticleSeeds(): ArticleSeed[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const bundles = readUploadedPapers();
+  return bundles.flatMap((bundle) =>
+    bundle.passages.map((passage) => ({
+      id: passage.id,
+      exam: (bundle.paper.exam as Article["exam"]) || "鍏骇",
+      year: bundle.paper.year,
+      month: bundle.paper.month,
+      set: bundle.paper.set,
+      paperId: bundle.paper.id,
+      section: passage.section,
+      title: passage.title,
+      level: passage.level || "CET-6",
+      category: passage.category || "Exam Reading",
+      modeLabel: passage.modeLabel || "闃呰瀛︿範妯″紡",
+      content: passage.content,
+      highlightSeeds: passage.highlightSeeds || []
+    }))
+  );
+}
+
+function uploadedBundlesToExamPapers(): ExamPaper[] {
+  if (typeof window === "undefined") {
+    return [];
+  }
+  const bundles = readUploadedPapers();
+  return bundles.map((bundle) => ({
+    id: bundle.paper.id,
+    exam: (bundle.paper.exam as Article["exam"]) || "鍏骇",
+    year: bundle.paper.year,
+    month: bundle.paper.month,
+    set: bundle.paper.set,
+    title: bundle.paper.title,
+    passageIds: bundle.passages.map((p) => p.id)
+  }));
+}
+
+export function getAllArticles(): Article[] {
+  const mergedArticleSeeds = dedupeById([
+    ...articlesSeed,
+    ...importedArticleSeeds,
+    ...uploadedBundlesToArticleSeeds()
+  ]);
+  return mergedArticleSeeds.map(createArticle);
+}
+
+export function getAllPapers(): ExamPaper[] {
+  return dedupeById([
+    ...builtInExamPapers,
+    ...importedExamPapers,
+    ...uploadedBundlesToExamPapers()
+  ]);
+}
+
+// Keep compatibility for modules that still import these constants directly.
+export const mockArticles: Article[] = getAllArticles();
+export const examPapers: ExamPaper[] = getAllPapers();
+
+export function getArticleById(id: string): Article | undefined {
+  return getAllArticles().find((item) => item.id === id);
+}
+
+export function getArticlesByExam(exam: Article["exam"]): Article[] {
+  return getAllArticles().filter((item) => item.exam === exam);
+}
+
+export function getPapersByExam(exam: Article["exam"]): ExamPaper[] {
+  return getAllPapers().filter((paper) => paper.exam === exam);
+}
